@@ -1,6 +1,0 @@
-import { createApp } from "./app.js";
-const PORT = process.env.PORT || 3456;
-const app = createApp();
-app.listen(PORT, () => {
-    console.log(`🛒 Shopping list app running on http://localhost:${PORT}`);
-});
