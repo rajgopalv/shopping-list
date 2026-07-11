@@ -15,7 +15,7 @@ interface Props {
 
 export default function StoreTabs({ stores, selectedId, onSelect }: Props) {
   return (
-    <div className="flex gap-1 p-1 overflow-x-auto flex-nowrap glass">
+    <div className="flex gap-1 p-1 overflow-x-auto flex-nowrap scrollbar-none glass">
       {stores.map((store) => {
         const isActive = store.id === selectedId;
         const style = STORE_STYLES[store.name] || STORE_STYLES.Costco;

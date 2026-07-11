@@ -24,6 +24,11 @@ export function useAddItem() {
       api.addItem(storeId, data),
     onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: ["items", variables.storeId] });
+      qc.setQueryData<Store[]>(["stores"], (old) =>
+        old?.map((s) =>
+          s.id === variables.storeId ? { ...s, unshopped_count: s.unshopped_count + 1 } : s
+        )
+      );
     },
   });
 }
@@ -33,8 +38,16 @@ export function useUpdateItem(storeId: number) {
   return useMutation({
     mutationFn: ({ itemId, ...data }: { itemId: number; is_shopped?: number; name?: string; quantity?: number; category_id?: number | null }) =>
       api.updateItem(itemId, data),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: ["items", storeId] });
+      if (variables.is_shopped !== undefined) {
+        const delta = variables.is_shopped ? -1 : 1;
+        qc.setQueryData<Store[]>(["stores"], (old) =>
+          old?.map((s) =>
+            s.id === storeId ? { ...s, unshopped_count: s.unshopped_count + delta } : s
+          )
+        );
+      }
     },
   });
 }
@@ -43,8 +56,17 @@ export function useDeleteItem(storeId: number) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (itemId: number) => api.deleteItem(itemId),
-    onSuccess: () => {
+    onSuccess: (_data, itemId) => {
       qc.invalidateQueries({ queryKey: ["items", storeId] });
+      const items = qc.getQueryData<Item[]>(["items", storeId]);
+      const item = items?.find((i) => i.id === itemId);
+      if (item && !item.is_shopped) {
+        qc.setQueryData<Store[]>(["stores"], (old) =>
+          old?.map((s) =>
+            s.id === storeId ? { ...s, unshopped_count: s.unshopped_count - 1 } : s
+          )
+        );
+      }
     },
   });
 }
