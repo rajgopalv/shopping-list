@@ -82,11 +82,12 @@ export default function QuickAddBar({ storeId }: Props) {
           className="flex-1 min-w-0 bg-transparent text-base text-white placeholder-white/30 outline-none py-1.5"
         />
 
-        {/* Quantity pill — always visible, tap for +/- */}
+        {/* Quantity pill — tap for +/- when input has text */}
         <div ref={pillRef} className="relative flex-shrink-0 w-10 h-7">
           <button
             onClick={() => setQtyOpen((v) => !v)}
-            className="flex items-center justify-center w-10 h-7 rounded-lg text-xs font-bold tabular-nums bg-white/10 border border-white/15 text-white/70 transition-all duration-150 cursor-pointer"
+            disabled={!canAdd}
+            className="flex items-center justify-center w-10 h-7 rounded-lg text-xs font-bold tabular-nums bg-white/10 border border-white/15 text-white/70 transition-all duration-150 disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer"
           >
             ×{qty}
           </button>
