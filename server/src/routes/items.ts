@@ -5,7 +5,10 @@ const router = Router();
 const db = () => getDb();
 
 router.get("/stores", (_req, res) => {
-  const stores = db().prepare("SELECT * FROM stores ORDER BY id").all();
+  const stores = db().prepare(`
+    SELECT s.*, (SELECT COUNT(*) FROM items WHERE store_id = s.id AND is_shopped = 0) as unshopped_count
+    FROM stores s ORDER BY s.id
+  `).all();
   res.json(stores);
 });
 

@@ -5,6 +5,7 @@ export interface Store {
   name: string;
   icon: string;
   color: string;
+  unshopped_count: number;
 }
 
 export interface Category {

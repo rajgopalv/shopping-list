@@ -15,7 +15,7 @@ interface Props {
 
 export default function StoreTabs({ stores, selectedId, onSelect }: Props) {
   return (
-    <div className="flex gap-1 p-1 glass">
+    <div className="flex gap-1 p-1 overflow-x-auto flex-nowrap glass">
       {stores.map((store) => {
         const isActive = store.id === selectedId;
         const style = STORE_STYLES[store.name] || STORE_STYLES.Costco;
@@ -25,7 +25,7 @@ export default function StoreTabs({ stores, selectedId, onSelect }: Props) {
             key={store.id}
             onClick={() => onSelect(store.id)}
             className={cn(
-              "flex-1 flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg",
+              "flex-shrink-0 flex items-center gap-1.5 py-1.5 px-2.5 rounded-lg whitespace-nowrap",
               "font-medium text-xs transition-all duration-300",
               isActive
                 ? "text-white"
@@ -42,7 +42,10 @@ export default function StoreTabs({ stores, selectedId, onSelect }: Props) {
             }
           >
             <span className="text-sm">{store.icon}</span>
-            <span className="truncate">{store.name.split(" ")[0]}</span>
+            <span className="truncate max-w-[72px]">{store.name.split(" ")[0]}</span>
+            <span className="text-[10px] font-semibold text-white/50 bg-white/10 rounded-full px-1.5 py-[1px] leading-none">
+              {store.unshopped_count}
+            </span>
           </button>
         );
       })}
