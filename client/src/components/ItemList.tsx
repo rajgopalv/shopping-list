@@ -1,0 +1,89 @@
+import { useMemo } from "react";
+import { Trash2 } from "lucide-react";
+import { useItems, useClearShopped } from "@/hooks/useShopping";
+import ItemCard from "./ItemCard";
+import QuickAddBar from "./QuickAddBar";
+import type { Item } from "@/lib/api";
+
+interface Props {
+  storeId: number;
+}
+
+export default function ItemList({ storeId }: Props) {
+  const { data: items = [], isLoading } = useItems(storeId, true);
+  const clearShopped = useClearShopped(storeId);
+
+  const grouped = useMemo(() => groupByCategory(items), [items]);
+
+  const shoppedCount = useMemo(() => items.filter((i) => i.is_shopped).length, [items]);
+
+  return (
+    <div className="space-y-6">
+      <QuickAddBar storeId={storeId} />
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-20">
+          <div className="w-8 h-8 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
+        </div>
+      ) : items.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="text-4xl mb-3 animate-float">🛒</div>
+          <p className="text-sm text-white/30">Type an item above to get started</p>
+        </div>
+      ) : (
+        <>
+          {Object.entries(grouped).map(([category, catItems]) => (
+            <CategoryGroup key={category} category={category} items={catItems} storeId={storeId} />
+          ))}
+
+          {shoppedCount > 0 && (
+            <button
+              onClick={() => { if (window.confirm(`Clear ${shoppedCount} completed item${shoppedCount > 1 ? "s" : ""}?`)) clearShopped.mutate(); }}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-white/10 text-xs font-medium text-white/40 hover:text-white/70 hover:border-white/20 transition-all cursor-pointer"
+            >
+              <Trash2 size={14} />
+              Clear all ({shoppedCount})
+            </button>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function CategoryGroup({
+  category,
+  items,
+  storeId,
+}: {
+  category: string;
+  items: Item[];
+  storeId: number;
+}) {
+  const hasActive = items.some((i) => !i.is_shopped);
+
+  return (
+    <div>
+      {hasActive && (
+        <h3 className="text-xs font-semibold text-white/30 uppercase tracking-wider mb-2 px-1">
+          {items[0]?.category_icon} {category}
+        </h3>
+      )}
+      <div className="space-y-2">
+        {items.map((item) => (
+          <ItemCard key={item.id} item={item} storeId={storeId} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function groupByCategory(items: Item[]): Record<string, Item[]> {
+  const groups: Record<string, Item[]> = {};
+  for (const item of items) {
+    const cat = item.category_name || "Other";
+    if (!groups[cat]) groups[cat] = [];
+    groups[cat].push(item);
+  }
+  return groups;
+}
