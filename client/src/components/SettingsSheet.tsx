@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { X, Layers, List, Plus, Trash2, ChevronUp, ChevronDown, Sun, Moon, Monitor } from "lucide-react";
+import { X, Layers, List, Plus, Trash2, ChevronUp, ChevronDown, Sun, Moon, Monitor, Github } from "lucide-react";
 import { useAddStore, useDeleteStore, useReorderStores } from "@/hooks/useShopping";
 import type { Theme } from "@/hooks/useTheme";
 import type { Store } from "@/lib/api";
@@ -228,7 +228,13 @@ export default function SettingsSheet({ open, onClose, grouped, onToggleGroup, s
               ))}
             </div>
           )}
-        </div>
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-center gap-1.5 pt-2 text-faint text-xs">
+            <Github size={11} strokeWidth={1.5} />
+            <span>@rajgopalv</span>
+          </div>
       </div>
     </div>
   );
