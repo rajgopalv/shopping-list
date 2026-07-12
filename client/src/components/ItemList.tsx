@@ -24,12 +24,15 @@ export default function ItemList({ storeId, grouped }: Props) {
 
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
-          <div className="w-8 h-8 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
+          <div
+            className="w-8 h-8 rounded-full animate-spin"
+            style={{ border: "2px solid var(--border)", borderTopColor: "var(--text-muted)" }}
+          />
         </div>
       ) : items.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <div className="text-4xl mb-3 animate-float">🛒</div>
-          <p className="text-sm text-white/30">Type an item above to get started</p>
+          <p className="text-sm text-faint">Type an item above to get started</p>
         </div>
       ) : (
         <>
@@ -51,7 +54,7 @@ export default function ItemList({ storeId, grouped }: Props) {
             <div className="flex justify-center">
               <button
                 onClick={() => { if (window.confirm(`Clear ${shoppedCount} completed item${shoppedCount > 1 ? "s" : ""}?`)) clearShopped.mutate(); }}
-                className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-white/10 text-xs font-medium text-white/40 hover:text-white/70 hover:border-white/20 transition-all cursor-pointer"
+                className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-subtle text-xs font-medium text-dim hover:text-muted hover:border-raised transition-all cursor-pointer"
               >
                 <Trash2 size={14} />
                 Clear all ({shoppedCount})
@@ -78,7 +81,7 @@ function CategoryGroup({
   return (
     <div>
       {hasActive && (
-        <h3 className="text-xs font-semibold text-white/30 uppercase tracking-wider mb-2 px-1">
+        <h3 className="text-xs font-semibold text-faint uppercase tracking-wider mb-2 px-1">
           {items[0]?.category_icon} {category}
         </h3>
       )}

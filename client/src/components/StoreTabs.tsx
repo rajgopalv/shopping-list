@@ -47,8 +47,8 @@ export default function StoreTabs({ stores, selectedId, onSelect }: Props) {
               "flex-shrink-0 flex items-center gap-1.5 py-1.5 px-2.5 rounded-lg whitespace-nowrap",
               "font-medium text-xs transition-all duration-300",
               isActive
-                ? "text-white"
-                : "text-white/40 hover:text-white/60"
+                ? "text-default"
+                : "text-dim hover:text-muted"
             )}
             style={
               isActive
@@ -62,7 +62,7 @@ export default function StoreTabs({ stores, selectedId, onSelect }: Props) {
           >
             <span className="text-sm">{store.icon}</span>
             <span className="truncate max-w-[72px]">{store.name.split(" ")[0]}</span>
-            <span className="text-[10px] font-semibold text-white/50 bg-white/10 rounded-full px-1.5 py-[1px] leading-none">
+            <span className="text-[10px] font-semibold text-dim bg-surface-raised rounded-full px-1.5 py-[1px] leading-none">
               {store.unshopped_count}
             </span>
           </button>

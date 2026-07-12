@@ -108,7 +108,7 @@ export default function ItemCard({ item, storeId, showCategoryIcon }: Props) {
           className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none transition-all duration-100"
           style={{ opacity: Math.min(1, -swipeOffset / SWIPE_THRESHOLD) }}
         >
-          <Trash2 size={22} strokeWidth={3} className="text-red-400" />
+          <Trash2 size={22} strokeWidth={3} className="text-red-500" />
         </div>
       )}
 
@@ -130,19 +130,19 @@ export default function ItemCard({ item, storeId, showCategoryIcon }: Props) {
       <div ref={pillRef} className="relative flex-shrink-0 w-9 h-7">
         <button
           onClick={() => setQtyOpen((v) => !v)}
-          className="flex items-center justify-center w-9 h-7 rounded-lg text-xs font-bold tabular-nums bg-white/10 border border-white/15 text-white/70 transition-all duration-150 cursor-pointer"
+          className="flex items-center justify-center w-9 h-7 rounded-lg text-xs font-bold tabular-nums bg-surface-raised border border-raised text-muted transition-all duration-150 cursor-pointer"
         >
           ×{item.quantity}
         </button>
         {qtyOpen && (
-          <div className="absolute left-1/2 -translate-x-1/2 -top-8 flex flex-col items-center bg-white/10 backdrop-blur-xl border border-white/15 rounded-xl p-1 z-50 shadow-lg">
+          <div className="absolute left-1/2 -translate-x-1/2 -top-8 flex flex-col items-center bg-surface-raised backdrop-blur-xl border border-raised rounded-xl p-1 z-50 shadow-lg">
             <button
               onClick={(e) => { e.stopPropagation(); adjustQty(1); }}
-              className="w-9 h-7 flex items-center justify-center rounded-lg active:bg-white/15 text-white/80 cursor-pointer"
+              className="w-9 h-7 flex items-center justify-center rounded-lg active:bg-surface-hover text-secondary cursor-pointer"
             >
               <Plus size={14} strokeWidth={2.5} />
             </button>
-            <div className="w-9 h-7 flex items-center justify-center rounded-lg text-xs font-bold tabular-nums text-white/70">
+            <div className="w-9 h-7 flex items-center justify-center rounded-lg text-xs font-bold tabular-nums text-muted">
               ×{item.quantity}
             </div>
             <button
@@ -154,7 +154,7 @@ export default function ItemCard({ item, storeId, showCategoryIcon }: Props) {
                   handleDelete();
                 }
               }}
-              className="w-9 h-7 flex items-center justify-center rounded-lg active:bg-white/15 text-white/80 cursor-pointer"
+              className="w-9 h-7 flex items-center justify-center rounded-lg active:bg-surface-hover text-secondary cursor-pointer"
             >
               {item.quantity > 1 ? <Minus size={14} strokeWidth={2.5} /> : <Trash2 size={14} strokeWidth={2.5} />}
             </button>
@@ -167,7 +167,7 @@ export default function ItemCard({ item, storeId, showCategoryIcon }: Props) {
         {showCategoryIcon && item.category_icon && (
           <span className="text-sm flex-shrink-0">{item.category_icon}</span>
         )}
-        <span className={`font-medium text-sm ${isShopped || completing ? "strike-through text-white/40" : "text-white"}`}>
+        <span className={`font-medium text-sm ${isShopped || completing ? "strike-through text-dim" : "text-default"}`}>
           {item.name}
         </span>
       </div>

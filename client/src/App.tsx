@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Settings } from "lucide-react";
 import { useStores } from "./hooks/useShopping";
+import { useTheme } from "./hooks/useTheme";
 import StoreTabs from "./components/StoreTabs";
 import ItemList from "./components/ItemList";
 import SettingsSheet from "./components/SettingsSheet";
@@ -18,9 +19,15 @@ function getInitialStoreId(): number | null {
 
 export default function App() {
   const { data: stores = [] } = useStores();
+  const { theme, setTheme, resolved } = useTheme();
   const [selectedStoreId, setSelectedStoreId] = useState<number | null>(getInitialStoreId);
   const [grouped, setGrouped] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", resolved === "light" ? "#ffffff" : "#0a0a0f");
+  }, [resolved]);
 
   useEffect(() => {
     if (stores.length > 0 && !selectedStoreId) {
@@ -64,7 +71,7 @@ export default function App() {
 
           <button
             onClick={() => setSettingsOpen(true)}
-            className="flex items-center justify-center w-8 h-8 rounded-xl text-white/30 hover:text-white/60 hover:bg-white/10 transition-all cursor-pointer"
+            className="flex items-center justify-center w-8 h-8 rounded-xl text-dim hover:text-muted hover:bg-surface-raised transition-all cursor-pointer"
           >
             <Settings size={16} strokeWidth={1.5} />
           </button>
@@ -81,6 +88,8 @@ export default function App() {
         grouped={grouped}
         onToggleGroup={() => setGrouped((g) => !g)}
         stores={stores}
+        theme={theme}
+        onThemeChange={setTheme}
       />
     </div>
   );

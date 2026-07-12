@@ -111,26 +111,26 @@ export default function QuickAddBar({ storeId }: Props) {
           onBlur={handleBlur}
           placeholder="Add item…"
           autoComplete="off"
-          className="flex-1 min-w-0 bg-transparent text-base text-white placeholder-white/30 outline-none py-1.5"
+          className="flex-1 min-w-0 bg-transparent text-base text-default placeholder:text-faint outline-none py-1.5"
         />
 
         <div className="relative flex-shrink-0 w-10 h-7">
           <button
             onClick={() => setQtyOpen((v) => !v)}
             disabled={!canAdd}
-            className="flex items-center justify-center w-10 h-7 rounded-lg text-xs font-bold tabular-nums bg-white/10 border border-white/15 text-white/70 transition-all duration-150 disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer"
+            className="flex items-center justify-center w-10 h-7 rounded-lg text-xs font-bold tabular-nums bg-surface-raised border border-raised text-muted transition-all duration-150 disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer"
           >
             ×{qty}
           </button>
           {qtyOpen && (
-            <div className="absolute left-1/2 -translate-x-1/2 -top-8 flex flex-col items-center bg-white/10 backdrop-blur-xl border border-white/15 rounded-xl p-1 z-20 shadow-lg">
+            <div className="absolute left-1/2 -translate-x-1/2 -top-8 flex flex-col items-center bg-surface-raised backdrop-blur-xl border border-raised rounded-xl p-1 z-20 shadow-lg">
               <button
                 onClick={(e) => { e.stopPropagation(); adjustQty(1); }}
-                className="w-10 h-7 flex items-center justify-center rounded-lg active:bg-white/15 text-white/80 cursor-pointer"
+                className="w-10 h-7 flex items-center justify-center rounded-lg active:bg-surface-hover text-secondary cursor-pointer"
               >
                 <Plus size={14} strokeWidth={2.5} />
               </button>
-              <div className="w-10 h-7 flex items-center justify-center rounded-lg text-xs font-bold tabular-nums text-white/70">
+              <div className="w-10 h-7 flex items-center justify-center rounded-lg text-xs font-bold tabular-nums text-muted">
                 ×{qty}
               </div>
               <button
@@ -143,7 +143,7 @@ export default function QuickAddBar({ storeId }: Props) {
                   }
                 }}
                 disabled={qty <= 1 && !canAdd}
-                className="w-10 h-7 flex items-center justify-center rounded-lg disabled:opacity-20 disabled:cursor-not-allowed active:bg-white/15 text-white/80 cursor-pointer"
+                className="w-10 h-7 flex items-center justify-center rounded-lg disabled:opacity-20 disabled:cursor-not-allowed active:bg-surface-hover text-secondary cursor-pointer"
               >
                 {qty > 1 ? <Minus size={14} strokeWidth={2.5} /> : <X size={14} strokeWidth={2.5} />}
               </button>
@@ -158,7 +158,7 @@ export default function QuickAddBar({ storeId }: Props) {
           style={{
             background: canAdd
               ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-              : "rgba(255,255,255,0.06)",
+              : "var(--surface)",
           }}
         >
           <Plus size={20} strokeWidth={2.5} />
@@ -166,18 +166,18 @@ export default function QuickAddBar({ storeId }: Props) {
       </div>
 
       {showSuggestions && (
-        <div className="mt-2 border-t border-white/10 pt-2 max-h-48 overflow-y-auto space-y-0.5">
+        <div className="mt-2 border-t border-subtle pt-2 max-h-48 overflow-y-auto space-y-0.5">
           {suggestions.map((s) => (
             <button
               key={s.name}
               onMouseDown={() => handleSuggestionMouseDown(s)}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-white/70 hover:bg-white/10 hover:text-white transition-all duration-150 cursor-pointer text-left"
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-muted hover:bg-surface-raised hover:text-default transition-all duration-150 cursor-pointer text-left"
             >
               {s.category_icon && (
                 <span className="flex-shrink-0 text-sm w-5 text-center">{s.category_icon}</span>
               )}
               <span className="flex-1 truncate">{s.name}</span>
-              <span className="text-[11px] text-white/25 tabular-nums flex-shrink-0">×{s.frequency}</span>
+              <span className="text-[11px] text-fainter tabular-nums flex-shrink-0">×{s.frequency}</span>
             </button>
           ))}
         </div>
