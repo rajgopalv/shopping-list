@@ -231,7 +231,7 @@ export default function SettingsSheet({ open, onClose, grouped, onToggleGroup, s
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-center gap-1.5 pt-2 text-faint text-xs">
+          <div className="flex items-center justify-center gap-1.5 pt-4 text-faint text-xs">
             <Github size={13} strokeWidth={1.5} />
             <span>@rajgopalv</span>
           </div>
