@@ -1,0 +1,8 @@
+node_modules/
+server/data/
+server/dist/
+client/dist/
+mcp-server/dist/
+.git/
+.gitignore
+*.md

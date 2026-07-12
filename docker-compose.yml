@@ -1,0 +1,13 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3456:3456"
+    volumes:
+      - shopping_data:/app/server/data
+    restart: always
+    environment:
+      - NODE_ENV=production
+
+volumes:
+  shopping_data:

@@ -225,6 +225,62 @@ server.tool("delete_store", "Delete a store and all its items permanently", {
     await api(`/stores/${store.id}`, { method: "DELETE" });
     return { content: [{ type: "text", text: `🗑️ Deleted "${store.name}" and all its items.` }] };
 });
+server.tool("reorder_stores", "Reorder stores by providing store names in the desired order", {
+    store_names: z.array(z.string()).describe("Store names in the new order (e.g., [\"Indian Stores\", \"Costco\", \"Fred Meyer\"])"),
+}, async ({ store_names }) => {
+    const stores = await api("/stores");
+    const order = [];
+    for (const name of store_names) {
+        const lower = name.toLowerCase();
+        const match = stores.find((s) => s.name.toLowerCase().includes(lower));
+        if (!match) {
+            return { content: [{ type: "text", text: `Store "${name}" not found.` }], isError: true };
+        }
+        order.push(match.id);
+    }
+    if (order.length !== stores.length) {
+        return { content: [{ type: "text", text: `Expected ${stores.length} stores, got ${order.length}.` }], isError: true };
+    }
+    await api("/stores/reorder", { method: "PATCH", body: JSON.stringify({ order }) });
+    return { content: [{ type: "text", text: `✅ Reordered stores: ${store_names.join(" → ")}` }] };
+});
+server.tool("list_categories", "List all categories used for grouping items", {}, async () => {
+    const cats = await api("/categories");
+    const text = cats
+        .map((c) => `${c.icon || "📦"} **${c.name}**${c.is_preset ? " (preset)" : ""}`)
+        .join("\n");
+    return { content: [{ type: "text", text: text || "No categories found." }] };
+});
+server.tool("update_item", "Update an item's quantity or un-mark it as shopped", {
+    store_name: z.string().describe("Name of the store"),
+    item_name: z.string().describe("Current name of the item"),
+    quantity: z.number().optional().describe("New quantity"),
+    mark_unshopped: z.boolean().optional().describe("Set to true to un-mark a shopped item"),
+}, async ({ store_name, item_name, quantity, mark_unshopped }) => {
+    const store = await findStore(store_name);
+    if (!store) {
+        return { content: [{ type: "text", text: `Store "${store_name}" not found.` }], isError: true };
+    }
+    const item = await findItem(store.id, item_name);
+    if (!item) {
+        return { content: [{ type: "text", text: `Item "${item_name}" not found in ${store.name}.` }], isError: true };
+    }
+    const updates = {};
+    if (quantity !== undefined)
+        updates.quantity = quantity;
+    if (mark_unshopped)
+        updates.is_shopped = 0;
+    if (Object.keys(updates).length === 0) {
+        return { content: [{ type: "text", text: "No updates provided. Specify quantity or mark_unshopped." }] };
+    }
+    await api(`/items/${item.id}`, { method: "PATCH", body: JSON.stringify(updates) });
+    const parts = [];
+    if (quantity !== undefined)
+        parts.push(`quantity → ${quantity}`);
+    if (mark_unshopped)
+        parts.push("un-shopped");
+    return { content: [{ type: "text", text: `✅ Updated "${item.name}": ${parts.join(", ")}` }] };
+});
 async function main() {
     const transport = new StdioServerTransport();
     await server.connect(transport);
