@@ -28,6 +28,14 @@ export interface Item {
   category_icon: string | null;
 }
 
+export interface Suggestion {
+  name: string;
+  frequency: number;
+  category_id: number | null;
+  category_name: string | null;
+  category_icon: string | null;
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     headers: { "Content-Type": "application/json" },
@@ -56,4 +64,13 @@ export const api = {
     request<void>(`/stores/${storeId}/items/shopped`, { method: "DELETE" }),
   addCategory: (data: { name: string; icon?: string }) =>
     request<Category>("/categories", { method: "POST", body: JSON.stringify(data) }),
+  getSuggestions: (q: string) =>
+    request<Suggestion[]>(`/items/suggestions?q=${encodeURIComponent(q)}`),
+  getItemNames: () => request<Suggestion[]>("/item-names"),
+  addStore: (data: { name: string; icon?: string }) =>
+    request<Store>("/stores", { method: "POST", body: JSON.stringify(data) }),
+  deleteStore: (id: number) =>
+    request<void>(`/stores/${id}`, { method: "DELETE" }),
+  reorderStores: (order: number[]) =>
+    request<void>("/stores/reorder", { method: "PATCH", body: JSON.stringify({ order }) }),
 };

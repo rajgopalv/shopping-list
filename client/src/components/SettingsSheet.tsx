@@ -1,0 +1,205 @@
+import { useState, type FormEvent } from "react";
+import { X, Layers, List, Plus, Trash2, ChevronUp, ChevronDown } from "lucide-react";
+import { useAddStore, useDeleteStore, useReorderStores } from "@/hooks/useShopping";
+import type { Store } from "@/lib/api";
+import { cn } from "@/lib/utils";
+
+const EMOJIS = ["🟡", "🔵", "🟠", "🔴", "🟢", "🟣", "🟤", "⚪"];
+
+interface Props {
+  open: boolean;
+  onClose: () => void;
+  grouped: boolean;
+  onToggleGroup: () => void;
+  stores: Store[];
+}
+
+export default function SettingsSheet({ open, onClose, grouped, onToggleGroup, stores }: Props) {
+  const addStore = useAddStore();
+  const deleteStore = useDeleteStore();
+  const reorderStores = useReorderStores();
+  const [name, setName] = useState("");
+  const [icon, setIcon] = useState("🛒");
+  const [showForm, setShowForm] = useState(false);
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    addStore.mutate(
+      { name: name.trim(), icon },
+      {
+        onSuccess: () => {
+          setName("");
+          setIcon("🛒");
+          setShowForm(false);
+        },
+      }
+    );
+  };
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end">
+      <div
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="relative w-full max-w-lg mx-auto bg-white/10 backdrop-blur-2xl border-t border-white/15 rounded-t-3xl p-5 pb-8 animate-slide-up shadow-2xl">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wider">Settings</h2>
+          <button
+            onClick={onClose}
+            className="flex items-center justify-center w-8 h-8 rounded-xl text-white/30 hover:text-white/60 hover:bg-white/10 transition-all cursor-pointer"
+          >
+            <X size={18} strokeWidth={1.5} />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          {/* View mode */}
+          <div>
+            <label className="text-xs font-medium text-white/40 mb-2 block">List view</label>
+            <div className="flex items-center gap-1 p-0.5 rounded-xl bg-white/5 w-fit">
+              <button
+                onClick={() => { if (!grouped) onToggleGroup(); }}
+                className={cn(
+                  "flex items-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-medium transition-all cursor-pointer",
+                  grouped ? "bg-white/10 text-white/80 shadow-sm" : "text-white/40 hover:text-white/60"
+                )}
+              >
+                <Layers size={13} />
+                Grouped
+              </button>
+              <button
+                onClick={() => { if (grouped) onToggleGroup(); }}
+                className={cn(
+                  "flex items-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-medium transition-all cursor-pointer",
+                  !grouped ? "bg-white/10 text-white/80 shadow-sm" : "text-white/40 hover:text-white/60"
+                )}
+              >
+                <List size={13} />
+                Flat
+              </button>
+            </div>
+          </div>
+
+          {/* Add store */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-medium text-white/40">Stores</label>
+              <button
+                onClick={() => setShowForm((v) => !v)}
+                className="flex items-center gap-1 text-xs text-white/40 hover:text-white/70 transition-all cursor-pointer"
+              >
+                <Plus size={13} />
+                Add store
+              </button>
+            </div>
+
+            {showForm && (
+              <form onSubmit={handleSubmit} className="flex items-center gap-2">
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={icon}
+                    onChange={(e) => setIcon(e.target.value)}
+                    className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-center text-lg outline-none focus:border-white/30 transition-all"
+                    maxLength={2}
+                  />
+                </div>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Store name"
+                  className="flex-1 h-10 rounded-xl bg-white/5 border border-white/10 px-3 text-sm text-white placeholder-white/20 outline-none focus:border-white/30 transition-all"
+                  autoFocus
+                />
+                <button
+                  type="submit"
+                  disabled={!name.trim() || addStore.isPending}
+                  className="flex-shrink-0 flex items-center justify-center px-4 h-10 rounded-xl text-xs font-medium bg-white/10 border border-white/15 text-white/70 hover:bg-white/15 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  {addStore.isPending ? "..." : "Add"}
+                </button>
+              </form>
+            )}
+
+            {showForm && (
+              <div className="flex gap-1.5 mt-2 flex-wrap">
+                {EMOJIS.map((e) => (
+                  <button
+                    key={e}
+                    type="button"
+                    onClick={() => setIcon(e)}
+                    className={cn(
+                      "w-8 h-8 flex items-center justify-center rounded-lg text-sm transition-all cursor-pointer",
+                      icon === e ? "bg-white/15 ring-1 ring-white/30 scale-110" : "bg-white/5 hover:bg-white/10"
+                    )}
+                  >
+                    {e}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Store list */}
+          {stores.length > 0 && (
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-white/40 mb-2 block">Reorder & delete</label>
+              {stores.map((store, i) => (
+                <div
+                  key={store.id}
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5"
+                >
+                  <span className="text-sm w-6 text-center">{store.icon}</span>
+                  <span className="flex-1 text-sm text-white/80 truncate">{store.name}</span>
+
+                  <div className="flex items-center gap-0.5">
+                    <button
+                      onClick={() => {
+                        const next = [...stores];
+                        const ids = next.map((s) => s.id);
+                        [ids[i - 1], ids[i]] = [ids[i], ids[i - 1]];
+                        reorderStores.mutate(ids);
+                      }}
+                      disabled={i === 0}
+                      className="flex items-center justify-center w-7 h-7 rounded-lg text-white/30 hover:text-white/60 hover:bg-white/10 transition-all disabled:opacity-15 disabled:cursor-not-allowed cursor-pointer"
+                    >
+                      <ChevronUp size={15} strokeWidth={2} />
+                    </button>
+                    <button
+                      onClick={() => {
+                        const next = [...stores];
+                        const ids = next.map((s) => s.id);
+                        [ids[i], ids[i + 1]] = [ids[i + 1], ids[i]];
+                        reorderStores.mutate(ids);
+                      }}
+                      disabled={i === stores.length - 1}
+                      className="flex items-center justify-center w-7 h-7 rounded-lg text-white/30 hover:text-white/60 hover:bg-white/10 transition-all disabled:opacity-15 disabled:cursor-not-allowed cursor-pointer"
+                    >
+                      <ChevronDown size={15} strokeWidth={2} />
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      if (window.confirm(`Delete "${store.name}" and all its items?`)) {
+                        deleteStore.mutate(store.id);
+                      }
+                    }}
+                    className="flex items-center justify-center w-7 h-7 rounded-lg text-red-400/40 hover:text-red-400 hover:bg-red-500/10 transition-all cursor-pointer"
+                  >
+                    <Trash2 size={14} strokeWidth={2} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

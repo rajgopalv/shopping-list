@@ -7,18 +7,19 @@ import type { Item } from "@/lib/api";
 
 interface Props {
   storeId: number;
+  grouped: boolean;
 }
 
-export default function ItemList({ storeId }: Props) {
+export default function ItemList({ storeId, grouped }: Props) {
   const { data: items = [], isLoading } = useItems(storeId, true);
   const clearShopped = useClearShopped(storeId);
 
-  const grouped = useMemo(() => groupByCategory(items), [items]);
+  const groupedMap = useMemo(() => groupByCategory(items), [items]);
 
   const shoppedCount = useMemo(() => items.filter((i) => i.is_shopped).length, [items]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <QuickAddBar storeId={storeId} />
 
       {isLoading ? (
@@ -32,18 +33,30 @@ export default function ItemList({ storeId }: Props) {
         </div>
       ) : (
         <>
-          {Object.entries(grouped).map(([category, catItems]) => (
-            <CategoryGroup key={category} category={category} items={catItems} storeId={storeId} />
-          ))}
+          {grouped ? (
+            <>
+              {Object.entries(groupedMap).map(([category, catItems]) => (
+                <CategoryGroup key={category} category={category} items={catItems} storeId={storeId} />
+              ))}
+            </>
+          ) : (
+            <div className="space-y-2">
+              {items.map((item) => (
+                <ItemCard key={item.id} item={item} storeId={storeId} showCategoryIcon />
+              ))}
+            </div>
+          )}
 
           {shoppedCount > 0 && (
-            <button
-              onClick={() => { if (window.confirm(`Clear ${shoppedCount} completed item${shoppedCount > 1 ? "s" : ""}?`)) clearShopped.mutate(); }}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-white/10 text-xs font-medium text-white/40 hover:text-white/70 hover:border-white/20 transition-all cursor-pointer"
-            >
-              <Trash2 size={14} />
-              Clear all ({shoppedCount})
-            </button>
+            <div className="flex justify-center">
+              <button
+                onClick={() => { if (window.confirm(`Clear ${shoppedCount} completed item${shoppedCount > 1 ? "s" : ""}?`)) clearShopped.mutate(); }}
+                className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-white/10 text-xs font-medium text-white/40 hover:text-white/70 hover:border-white/20 transition-all cursor-pointer"
+              >
+                <Trash2 size={14} />
+                Clear all ({shoppedCount})
+              </button>
+            </div>
           )}
         </>
       )}

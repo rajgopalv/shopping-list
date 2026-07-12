@@ -1,3 +1,4 @@
+import { useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import type { Store } from "@/lib/api";
 
@@ -14,8 +15,25 @@ interface Props {
 }
 
 export default function StoreTabs({ stores, selectedId, onSelect }: Props) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const activeRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (stores.length === 0) return;
+    const container = containerRef.current;
+    const active = activeRef.current;
+    if (!container || !active) return;
+
+    const containerWidth = container.offsetWidth;
+    const buttonLeft = active.offsetLeft;
+    const buttonWidth = active.offsetWidth;
+    const target = buttonLeft - containerWidth / 2 + buttonWidth / 2;
+
+    container.scrollTo({ left: Math.max(0, target), behavior: "smooth" });
+  }, [selectedId, stores.length > 0]);
+
   return (
-    <div className="flex gap-1 p-1 overflow-x-auto flex-nowrap scrollbar-none glass">
+    <div ref={containerRef} className="flex gap-1 p-1 overflow-x-auto flex-nowrap scrollbar-none glass">
       {stores.map((store) => {
         const isActive = store.id === selectedId;
         const style = STORE_STYLES[store.name] || STORE_STYLES.Costco;
@@ -23,6 +41,7 @@ export default function StoreTabs({ stores, selectedId, onSelect }: Props) {
         return (
           <button
             key={store.id}
+            ref={isActive ? activeRef : undefined}
             onClick={() => onSelect(store.id)}
             className={cn(
               "flex-shrink-0 flex items-center gap-1.5 py-1.5 px-2.5 rounded-lg whitespace-nowrap",

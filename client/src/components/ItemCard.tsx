@@ -8,9 +8,10 @@ const SWIPE_THRESHOLD = 80;
 interface Props {
   item: Item;
   storeId: number;
+  showCategoryIcon?: boolean;
 }
 
-export default function ItemCard({ item, storeId }: Props) {
+export default function ItemCard({ item, storeId, showCategoryIcon }: Props) {
   const [completing, setCompleting] = useState(false);
   const [qtyOpen, setQtyOpen] = useState(false);
   const [swipeOffset, setSwipeOffset] = useState(0);
@@ -162,18 +163,13 @@ export default function ItemCard({ item, storeId }: Props) {
 
         </div>
 
-      {/* Item info */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className={`font-medium text-sm ${isShopped || completing ? "strike-through text-white/40" : "text-white"}`}>
-            {item.name}
-          </span>
-        </div>
-        {item.category_name && (
-          <span className="category-pill mt-1.5">
-            {item.category_icon} {item.category_name}
-          </span>
+      <div className="flex-1 min-w-0 flex items-center gap-2">
+        {showCategoryIcon && item.category_icon && (
+          <span className="text-sm flex-shrink-0">{item.category_icon}</span>
         )}
+        <span className={`font-medium text-sm ${isShopped || completing ? "strike-through text-white/40" : "text-white"}`}>
+          {item.name}
+        </span>
       </div>
 
       {/* Checkbox — right side for thumb reach */}

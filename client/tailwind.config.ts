@@ -33,6 +33,10 @@ const config: Config = {
         glow: "0 0 20px var(--glow-color, rgba(255, 255, 255, 0.1))",
       },
       keyframes: {
+        "slide-up": {
+          "0%": { transform: "translateY(100%)" },
+          "100%": { transform: "translateY(0)" },
+        },
         "slide-in": {
           "0%": { transform: "translateY(-10px)", opacity: "0" },
           "100%": { transform: "translateY(0)", opacity: "1" },
@@ -57,6 +61,7 @@ const config: Config = {
         },
       },
       animation: {
+        "slide-up": "slide-up 0.35s cubic-bezier(0.32, 0.72, 0, 1)",
         "slide-in": "slide-in 0.3s ease-out",
         "slide-out": "slide-out 0.3s ease-in forwards",
         "fade-up": "fade-up 0.4s ease-out",

@@ -1,5 +1,6 @@
+import { useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, type Store, type Item, type Category } from "../lib/api";
+import { api, type Store, type Item, type Category, type Suggestion } from "../lib/api";
 
 export function useStores() {
   return useQuery<Store[]>({ queryKey: ["stores"], queryFn: api.getStores });
@@ -24,6 +25,7 @@ export function useAddItem() {
       api.addItem(storeId, data),
     onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: ["items", variables.storeId] });
+      qc.invalidateQueries({ queryKey: ["suggestions"] });
       qc.setQueryData<Store[]>(["stores"], (old) =>
         old?.map((s) =>
           s.id === variables.storeId ? { ...s, unshopped_count: s.unshopped_count + 1 } : s
@@ -81,6 +83,36 @@ export function useClearShopped(storeId: number) {
   });
 }
 
+export function useAddStore() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { name: string; icon?: string }) => api.addStore(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["stores"] });
+    },
+  });
+}
+
+export function useDeleteStore() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.deleteStore(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["stores"] });
+    },
+  });
+}
+
+export function useReorderStores() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (order: number[]) => api.reorderStores(order),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["stores"] });
+    },
+  });
+}
+
 export function useAddCategory() {
   const qc = useQueryClient();
   return useMutation({
@@ -89,4 +121,20 @@ export function useAddCategory() {
       qc.invalidateQueries({ queryKey: ["categories"] });
     },
   });
+}
+
+export function useSuggestions(query: string): Suggestion[] {
+  const { data: all = [] } = useQuery<Suggestion[]>({
+    queryKey: ["suggestions", "all"],
+    queryFn: api.getItemNames,
+    staleTime: 60_000,
+  });
+
+  return useMemo(() => {
+    if (!query.trim()) return [];
+    const q = query.toLowerCase();
+    return all
+      .filter((s) => s.name.toLowerCase().includes(q))
+      .slice(0, 10);
+  }, [all, query]);
 }
