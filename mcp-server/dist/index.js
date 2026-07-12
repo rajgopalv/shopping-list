@@ -1,104 +1,90 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import Database from "better-sqlite3";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_PATH = process.env.SHOPPING_DB_PATH || path.join(__dirname, "../../server/data/shopping.db");
-if (DB_PATH !== ":memory:") {
-    const dir = path.dirname(DB_PATH);
-    if (!fs.existsSync(dir))
-        fs.mkdirSync(dir, { recursive: true });
+const API_BASE = process.env.SHOPPING_API_URL || "http://localhost:3456/api";
+async function api(path, options) {
+    const res = await fetch(`${API_BASE}${path}`, {
+        headers: { "Content-Type": "application/json" },
+        ...options,
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText }));
+        throw new Error(err.error || res.statusText);
+    }
+    if (res.status === 204)
+        return undefined;
+    return res.json();
 }
-const db = new Database(DB_PATH);
-db.pragma("foreign_keys = ON");
+async function findStore(name) {
+    const stores = await api("/stores");
+    const lower = name.toLowerCase();
+    return stores.find((s) => s.name.toLowerCase().includes(lower)) || null;
+}
+async function findItem(storeId, name) {
+    const items = await api(`/stores/${storeId}/items?include_shopped=true`);
+    const lower = name.toLowerCase();
+    return items.find((i) => i.name.toLowerCase().includes(lower)) || null;
+}
 const server = new McpServer({
     name: "shopping-list",
-    version: "1.0.0",
+    version: "2.0.0",
 });
-// Helper: find store by name (fuzzy match)
-function findStore(name) {
-    const lower = name.toLowerCase();
-    return db.prepare("SELECT * FROM stores WHERE lower(name) LIKE ?").get(`%${lower}%`);
-}
-// Helper: find category by name
-function findCategory(name) {
-    const lower = name.toLowerCase();
-    return db.prepare("SELECT * FROM categories WHERE lower(name) LIKE ?").get(`%${lower}%`);
-}
-server.tool("list_stores", "List all available stores", {}, async () => {
-    const stores = db.prepare("SELECT * FROM stores ORDER BY id").all();
-    return {
-        content: [
-            {
-                type: "text",
-                text: JSON.stringify(stores, null, 2),
-            },
-        ],
-    };
+server.tool("list_stores", "List all stores with their unshopped item counts", {}, async () => {
+    const stores = await api("/stores");
+    const text = stores
+        .map((s) => `${s.icon || "🛒"} **${s.name}** — ${s.unshopped_count} unshopped`)
+        .join("\n");
+    return { content: [{ type: "text", text: text || "No stores found." }] };
 });
-server.tool("add_item", "Add an item to a store's shopping list", {
+server.tool("add_item", "Add an item to a store's shopping list. Category is auto-detected from past entries if not provided.", {
     store_name: z.string().describe("Name of the store (e.g., Costco, Fred Meyer, Indian Stores)"),
     item_name: z.string().describe("Name of the item to add"),
-    quantity: z.number().optional().default(1).describe("Quantity of the item"),
-    category: z.string().optional().describe("Category name (e.g., Produce, Dairy, Snacks)"),
+    quantity: z.number().optional().default(1).describe("Quantity (default 1)"),
+    category: z.string().optional().describe("Optional category name (e.g., Produce, Dairy)"),
 }, async ({ store_name, item_name, quantity, category }) => {
-    const store = findStore(store_name);
-    if (!store) {
-        return {
-            content: [{ type: "text", text: `Store "${store_name}" not found. Available: Costco, Fred Meyer, Indian Stores` }],
-            isError: true,
-        };
-    }
-    let categoryId = null;
-    if (category) {
-        const cat = findCategory(category);
-        if (cat)
-            categoryId = cat.id;
-    }
-    const result = db
-        .prepare("INSERT INTO items (store_id, name, quantity, category_id) VALUES (?, ?, ?, ?)")
-        .run(store.id, item_name.trim(), quantity || 1, categoryId);
-    const item = db.prepare(`
-      SELECT i.*, c.name as category_name, c.icon as category_icon
-      FROM items i LEFT JOIN categories c ON i.category_id = c.id
-      WHERE i.id = ?
-    `).get(result.lastInsertRowid);
-    return {
-        content: [
-            {
-                type: "text",
-                text: `✅ Added "${item_name}" (x${quantity || 1}) to ${store.name}${category ? ` in ${category}` : ""}`,
-            },
-        ],
-    };
-});
-server.tool("list_items", "List items in a store's shopping list", {
-    store_name: z.string().describe("Name of the store"),
-    include_shopped: z.boolean().optional().default(false).describe("Include already shopped items"),
-}, async ({ store_name, include_shopped }) => {
-    const store = findStore(store_name);
+    const store = await findStore(store_name);
     if (!store) {
         return {
             content: [{ type: "text", text: `Store "${store_name}" not found.` }],
             isError: true,
         };
     }
-    let query = `
-      SELECT i.*, c.name as category_name, c.icon as category_icon
-      FROM items i LEFT JOIN categories c ON i.category_id = c.id
-      WHERE i.store_id = ?
-    `;
-    if (!include_shopped) {
-        query += " AND i.is_shopped = 0";
+    let categoryId = null;
+    if (category) {
+        const cats = await api("/categories");
+        const match = cats.find((c) => c.name.toLowerCase().includes(category.toLowerCase()));
+        if (match)
+            categoryId = match.id;
     }
-    query += " ORDER BY i.is_shopped ASC, c.name ASC, i.created_at DESC";
-    const items = db.prepare(query).all(store.id);
+    try {
+        const item = await api(`/stores/${store.id}/items`, {
+            method: "POST",
+            body: JSON.stringify({ name: item_name, quantity, category_id: categoryId }),
+        });
+        const catTag = item.category_name ? ` in ${item.category_icon || ""} ${item.category_name}` : "";
+        return {
+            content: [{ type: "text", text: `✅ Added "${item.name}" (×${item.quantity}) to ${store.name}${catTag}` }],
+        };
+    }
+    catch (e) {
+        return {
+            content: [{ type: "text", text: `Failed to add item: ${e instanceof Error ? e.message : "unknown error"}` }],
+            isError: true,
+        };
+    }
+});
+server.tool("list_items", "List all items in a store, optionally including already-shopped items", {
+    store_name: z.string().describe("Name of the store"),
+    include_shopped: z.boolean().optional().default(false).describe("Include shopped items"),
+}, async ({ store_name, include_shopped }) => {
+    const store = await findStore(store_name);
+    if (!store) {
+        return { content: [{ type: "text", text: `Store "${store_name}" not found.` }], isError: true };
+    }
+    const items = await api(`/stores/${store.id}/items?include_shopped=${include_shopped}`);
     if (items.length === 0) {
         return {
-            content: [{ type: "text", text: `No${include_shopped ? "" : " unshopped"} items in ${store.name}'s list.` }],
+            content: [{ type: "text", text: `No${include_shopped ? "" : " unshopped"} items in ${store.name}.` }],
         };
     }
     const grouped = {};
@@ -108,12 +94,13 @@ server.tool("list_items", "List items in a store's shopping list", {
             grouped[cat] = [];
         grouped[cat].push(item);
     }
-    let text = `📋 **${store.name}** (${items.length} items)\n\n`;
+    let text = `📋 **${store.name}** (${items.length} item${items.length !== 1 ? "s" : ""})\n\n`;
     for (const [cat, catItems] of Object.entries(grouped)) {
-        text += `**${cat}:**\n`;
+        const icon = catItems[0]?.category_icon || "";
+        text += `**${icon} ${cat}:**\n`;
         for (const item of catItems) {
             const check = item.is_shopped ? "✅" : "⬜";
-            text += `  ${check} ${item.name} (x${item.quantity})\n`;
+            text += `  ${check} ${item.name} (×${item.quantity})\n`;
         }
         text += "\n";
     }
@@ -123,61 +110,124 @@ server.tool("mark_shopped", "Mark an item as shopped in a store", {
     store_name: z.string().describe("Name of the store"),
     item_name: z.string().describe("Name of the item to mark as shopped"),
 }, async ({ store_name, item_name }) => {
-    const store = findStore(store_name);
+    const store = await findStore(store_name);
     if (!store) {
         return { content: [{ type: "text", text: `Store "${store_name}" not found.` }], isError: true };
     }
-    const item = db
-        .prepare("SELECT * FROM items WHERE store_id = ? AND lower(name) LIKE ? AND is_shopped = 0")
-        .get(store.id, `%${item_name.toLowerCase()}%`);
+    const item = await findItem(store.id, item_name);
     if (!item) {
         return {
-            content: [{ type: "text", text: `Item "${item_name}" not found or already shopped in ${store.name}.` }],
+            content: [{ type: "text", text: `Item "${item_name}" not found in ${store.name}.` }],
             isError: true,
         };
     }
-    db.prepare("UPDATE items SET is_shopped = 1, shopped_at = datetime('now') WHERE id = ?").run(item.id);
-    return {
-        content: [{ type: "text", text: `✅ Marked "${item.name}" as shopped in ${store.name}.` }],
-    };
+    if (item.is_shopped) {
+        return {
+            content: [{ type: "text", text: `"${item.name}" is already marked as shopped in ${store.name}.` }],
+        };
+    }
+    await api(`/items/${item.id}`, { method: "PATCH", body: JSON.stringify({ is_shopped: 1 }) });
+    return { content: [{ type: "text", text: `✅ Marked "${item.name}" as shopped in ${store.name}.` }] };
 });
-server.tool("remove_item", "Remove an item from a store's list", {
+server.tool("remove_item", "Delete an item from a store's list", {
     store_name: z.string().describe("Name of the store"),
     item_name: z.string().describe("Name of the item to remove"),
 }, async ({ store_name, item_name }) => {
-    const store = findStore(store_name);
+    const store = await findStore(store_name);
     if (!store) {
         return { content: [{ type: "text", text: `Store "${store_name}" not found.` }], isError: true };
     }
-    const item = db
-        .prepare("SELECT * FROM items WHERE store_id = ? AND lower(name) LIKE ?")
-        .get(store.id, `%${item_name.toLowerCase()}%`);
+    const item = await findItem(store.id, item_name);
     if (!item) {
-        return { content: [{ type: "text", text: `Item "${item_name}" not found in ${store.name}.` }], isError: true };
+        return {
+            content: [{ type: "text", text: `Item "${item_name}" not found in ${store.name}.` }],
+            isError: true,
+        };
     }
-    db.prepare("DELETE FROM items WHERE id = ?").run(item.id);
-    return {
-        content: [{ type: "text", text: `🗑️ Removed "${item.name}" from ${store.name}.` }],
-    };
+    await api(`/items/${item.id}`, { method: "DELETE" });
+    return { content: [{ type: "text", text: `🗑️ Removed "${item.name}" from ${store.name}.` }] };
 });
-server.tool("add_category", "Add a custom category", {
-    name: z.string().describe("Category name"),
-    icon: z.string().optional().describe("Emoji icon for the category"),
+server.tool("add_category", "Add a custom category for organizing items", {
+    name: z.string().describe("Category name (e.g., Spices, International)"),
+    icon: z.string().optional().describe("Emoji icon (e.g., 🌶️)"),
 }, async ({ name, icon }) => {
     try {
-        db.prepare("INSERT INTO categories (name, icon, is_preset) VALUES (?, ?, 0)").run(name.trim(), icon || "📦");
-        return { content: [{ type: "text", text: `✅ Added category "${name}" ${icon || "📦"}` }] };
+        const cat = await api("/categories", {
+            method: "POST",
+            body: JSON.stringify({ name, icon }),
+        });
+        return { content: [{ type: "text", text: `✅ Added category "${cat.name}" ${cat.icon || "📦"}` }] };
     }
     catch (e) {
-        if (e.code === "SQLITE_CONSTRAINT_UNIQUE") {
-            return { content: [{ type: "text", text: `Category "${name}" already exists.` }] };
-        }
-        throw e;
+        return {
+            content: [{ type: "text", text: `Failed to add category: ${e instanceof Error ? e.message : "unknown error"}` }],
+            isError: true,
+        };
     }
+});
+server.tool("suggest_items", "Search for item name suggestions based on past entries. Returns matching names with their categories and how often they've been added.", {
+    query: z.string().describe("Partial item name to search for"),
+}, async ({ query }) => {
+    const suggestions = await api(`/items/suggestions?q=${encodeURIComponent(query)}`);
+    if (suggestions.length === 0) {
+        return { content: [{ type: "text", text: `No suggestions found for "${query}".` }] };
+    }
+    const text = suggestions
+        .map((s) => {
+        const cat = s.category_icon ? `${s.category_icon} ` : "";
+        return `  ${cat}${s.name} (×${s.frequency})`;
+    })
+        .join("\n");
+    return { content: [{ type: "text", text: `Suggestions for "${query}":\n${text}` }] };
+});
+server.tool("clear_shopped", "Remove all shopped/completed items from a store's list", {
+    store_name: z.string().describe("Name of the store"),
+}, async ({ store_name }) => {
+    const store = await findStore(store_name);
+    if (!store) {
+        return { content: [{ type: "text", text: `Store "${store_name}" not found.` }], isError: true };
+    }
+    const items = await api(`/stores/${store.id}/items?include_shopped=true`);
+    const shopped = items.filter((i) => i.is_shopped);
+    if (shopped.length === 0) {
+        return { content: [{ type: "text", text: `No shopped items to clear in ${store.name}.` }] };
+    }
+    await api(`/stores/${store.id}/items/shopped`, { method: "DELETE" });
+    return {
+        content: [{ type: "text", text: `🗑️ Cleared ${shopped.length} shopped item${shopped.length > 1 ? "s" : ""} from ${store.name}.` }],
+    };
+});
+server.tool("add_store", "Add a new store to the shopping list", {
+    name: z.string().describe("Store name"),
+    icon: z.string().optional().describe("Emoji icon (will auto-assign a matching color)"),
+}, async ({ name, icon }) => {
+    try {
+        const store = await api("/stores", {
+            method: "POST",
+            body: JSON.stringify({ name, icon }),
+        });
+        return { content: [{ type: "text", text: `✅ Added store "${store.name}" ${store.icon || "🛒"}` }] };
+    }
+    catch (e) {
+        return {
+            content: [{ type: "text", text: `Failed to add store: ${e instanceof Error ? e.message : "unknown error"}` }],
+            isError: true,
+        };
+    }
+});
+server.tool("delete_store", "Delete a store and all its items permanently", {
+    name: z.string().describe("Name of the store to delete"),
+}, async ({ name }) => {
+    const store = await findStore(name);
+    if (!store) {
+        return { content: [{ type: "text", text: `Store "${name}" not found.` }], isError: true };
+    }
+    await api(`/stores/${store.id}`, { method: "DELETE" });
+    return { content: [{ type: "text", text: `🗑️ Deleted "${store.name}" and all its items.` }] };
 });
 async function main() {
     const transport = new StdioServerTransport();
     await server.connect(transport);
-    console.error("🛒 Shopping List MCP server running");
+    console.error("🛒 Shopping List MCP server v2 running (API proxy mode)");
 }
 main().catch(console.error);
